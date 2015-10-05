@@ -1,4 +1,4 @@
-HackPics v1.0
+HackPics v1.0.1
 
 Description:
 	Reverse engineering project to extract pictures from a PlayStation2 game

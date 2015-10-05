@@ -1,6 +1,6 @@
 Dakusan License v2.0
 
-Regarding: HackPics v1.0
+Regarding: HackPics v1.0.1
 http://www.castledragmire.com/Projects/HackPics
 
 ------------------------------------------------------------------------------
@@ -61,5 +61,4 @@ OF  THIS  SOFTWARE,  EVEN  IF  ADVISED  OF  THE  POSSIBILITY  OF  SUCH DAMAGE.
 ------------------------------------------------------------------------------
                                   Addendum
 ------------------------------------------------------------------------------
-xddwal75.bmp is owned by Bandai and/or CyberConnect2.
 Zlib is licensed under the "zlib license".
