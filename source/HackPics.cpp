@@ -7,7 +7,6 @@ The main jurry rig is contained on this line:
 static BYTE PalettePicSeperator[]={0x00,0x03,0xCC,0xCC,0xFE,0xFE,0xFE,0x00,0xFE,0xFE,0x00,0x00,0xFE,0xFE,0x00,0x00,0xFE,0xFE,0x00,0x00,0xFE,0xFE,0xFE,0xFE,0xFE,0xFE,0xCD,0xCD,0xFE,0xFE,0xFE,0xFE,0xFE};
 This is the sequence of bytes the program looks for to know when it has found the boundary between the palette and the picture.  This area also contains some information on the format of the pictures, which I did not have time to study.  Some of the bytes in this sequence seem to remain constant for 99% of the files, and only change for a few, like byte 5, 10, 14, 17, 18,30,31,33.  Other bytes such as 22,29,32 seem to contain useful information like palette size and bitmap width.  The specific bytes are commented on the line above the "PalettePicSeperator[]" line.
 
-ConsoleStreamBuf & WriteRam are libraries I coded for personal use.  I included the WriteRam library file, but please don't ask for any further information on these files.
   Jeffrey Riaboy (Dakusan)
 */
 
@@ -15,10 +14,8 @@ ConsoleStreamBuf & WriteRam are libraries I coded for personal use.  I included 
 //General, compression, and console functions
 #include <windows.h>
 #include "zlib/zlib.h"
-//#include <consolestreambuf.h>
 
 //File IO Functions
-#include "WriteRam.h"
 #include <io.h>
 #include <fcntl.h>
 
@@ -34,7 +31,6 @@ struct CompressedFile
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 bool ParseDataFile(char *FullPathFileName);
 DWORD LoadRawFromDataFile(CompressedFile *TheFileNode, BYTE *UncompressedBuffer, int FileNum=0, BYTE *CompressedBuffer=NULL);
-bool LoadPictureFromFile(char *FileToOpen);
 bool LoadPictureFromRaw(BYTE *FileContents, DWORD FileSize);
 
 //Global variables
@@ -43,7 +39,7 @@ BYTE *BitmapContents=NULL;
 BITMAPINFO BitmapInfo[sizeof(BITMAPINFO)+MaxNumberOfColors];
 CompressedFile *FirstFile=NULL;
 
-//Extra stuff that I threw in for a quick gui before releasing thats not really optimized
+//Extra stuff that I threw in for a quick GUI before releasing thats not really optimized
 #include <stdio.h>
 DWORD ScreenWidth=800,ScreenHeight=600, WidthScale=5;
 HWND MainHwnd;
@@ -69,10 +65,6 @@ int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR pCmdLine,int nC
 	GetCurrentDirectory(255, DataFilePath);
 	strcat(DataFilePath, "\\");
 	strcat(DataFilePath, DataFileName);
-
-	//Init the console
-	//consolestreambuf dbgbuf(1);
-	//cout=&dbgbuf;
 	
 	//Init Bitmap Info structure
 	BITMAPINFOHEADER NewHeader={sizeof(BITMAPINFOHEADER),0,0,1,8,BI_RGB, 0, NULL, NULL, MaxNumberOfColors, MaxNumberOfColors};
@@ -145,7 +137,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			{
 				case BN_CLICKED: //If one of the buttons is clicked, save accordingly
 				{
-					WriteRam SaveFile;
 					char SaveBufferName[255];
 					GetCurrentDirectory(255, SaveBufferName);
 					strcat(SaveBufferName, "\\");
@@ -155,7 +146,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 					{
 						case SaveCompress: //Load compressed data to a file
 						{
-							//We need to rewind a little bit because uncompression normally doesnt need the headers, so our file pointer starts after the headers
+							//We need to rewind a little bit because uncompression normally doesn't need the headers, so our file pointer starts after the headers
 							BYTE *ReadIt=new BYTE[TenMegs];
 							DWORD StartRead=TheFile->FileStart>=50 ? 50 : TheFile->FileStart;
 							DWORD FileNum=_open(DataFileName, _O_RDONLY|_O_BINARY);
@@ -171,7 +162,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 							//Save to file
 							strcat(SaveBufferName, ".gz");
-							SaveFile.Write(ReadIt+i, TheFile->FileSize+StartRead-i);
+							FILE* MyFile=fopen(SaveBufferName, "wb");
+							fwrite(ReadIt+i, TheFile->FileSize+StartRead-i, 1, MyFile);
+							fclose(MyFile);
 							delete[] ReadIt;
 							break;
 						}
@@ -180,22 +173,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 							BYTE *ReadIt=new BYTE[TenMegs];
 							DWORD UncompressedSize=LoadRawFromDataFile(TheFile, ReadIt);
 							strcat(SaveBufferName, ".cmp");
-							SaveFile.Write(ReadIt, UncompressedSize);
+							FILE* MyFile=fopen(SaveBufferName, "wb");
+							fwrite(ReadIt, UncompressedSize, 1, MyFile);
+							fclose(MyFile);
 							delete[] ReadIt;
 							break;
 						}
 						case SaveBitmap: //Save directly from our BitmapInfo, already decompressed
 						{
 							strcat(SaveBufferName, ".bmp");
+							FILE* MyFile=fopen(SaveBufferName, "wb");
 							DWORD SizeOfHeader=sizeof(BITMAPFILEHEADER)+sizeof(BITMAPINFO)+MaxNumberOfColors*sizeof(DWORD), SizeOfData=BitmapInfo->bmiHeader.biWidth*BitmapInfo->bmiHeader.biHeight;
 							BITMAPFILEHEADER FileHeader={*(WORD*)"BM", SizeOfHeader+SizeOfData,0,0,SizeOfHeader};
-							SaveFile.Write(&FileHeader, sizeof(BITMAPFILEHEADER));
-							SaveFile.Write(&BitmapInfo, sizeof(BITMAPINFO)+MaxNumberOfColors*sizeof(DWORD));
-							SaveFile.Write(BitmapContents, BitmapInfo->bmiHeader.biWidth*BitmapInfo->bmiHeader.biHeight);
+							fwrite(&FileHeader, sizeof(BITMAPFILEHEADER), 1, MyFile);
+							fwrite(&BitmapInfo, sizeof(BITMAPINFO)+MaxNumberOfColors*sizeof(DWORD), 1, MyFile);
+							fwrite(BitmapContents, BitmapInfo->bmiHeader.biWidth*BitmapInfo->bmiHeader.biHeight, 1, MyFile);
+							fclose(MyFile);
 							break;
 						}
 					}
-					SaveFile.WriteToFile(SaveBufferName);
 					SetFocus(hWnd);
 					break;
 				}
@@ -265,15 +261,19 @@ bool ParseDataFile(char *FullPathFileName)
 	TextOut(MainDC, 200, 290, ParsingStats, strlen(ParsingStats));
 
 	//Read in data file
-	WriteRam DataFile;
-	DataFile.ReadFromFile(FullPathFileName);
-	BYTE *Content=(BYTE*)DataFile.GetBegginingPointer();
-	DWORD FileSize=DataFile.GetSizeOfFile(), FileOn=0, TotalSize=0;
-	if(!FileSize)
+	FILE *MyFile=fopen(FullPathFileName, "rb");
+	if(!MyFile)
 	{
 		MessageBox(NULL, "DATA.BIN does not seem to exist in the current directory, or is inaccessible, exiting.", NULL, MB_OK);
 		return false;
 	}
+	fseek(MyFile, 0, SEEK_END);
+	DWORD FileSize=FileSize=ftell(MyFile), FileOn=0, TotalSize=0;
+	fseek(MyFile, 0, SEEK_SET);
+	BYTE *Content=new BYTE[FileSize];
+	fread(Content, FileSize, 1, MyFile);
+	fclose(MyFile);
+	
 	BitBlt(MainDC, 0, 0, 1600, 1200, MainDC, 0, 0, WHITENESS);
 
 	//Loop through all files inside the data file
@@ -375,6 +375,7 @@ bool ParseDataFile(char *FullPathFileName)
 	while(CurrentFile);
 	ReleaseDC(MainHwnd, MainDC);
 	CurrentFileNode->NextFile=NULL;
+	delete[] Content;
 	return true;
 }
 
@@ -419,22 +420,15 @@ DWORD LoadRawFromDataFile(CompressedFile *TheFileNode, BYTE *UncompressedBuffer,
 	return TheStream.total_out; //Return uncompressed data size
 }
 
-bool LoadPictureFromFile(char *FileToOpen)
-{
-	//Open file for reading and storing into memory
-	WriteRam TheFile;
-	TheFile.ReadFromFile(FileToOpen);
-	return LoadPictureFromRaw((BYTE*)TheFile.GetBegginingPointer(), TheFile.GetSizeOfFile());
-}
 
 bool LoadPictureFromRaw(BYTE* FileContents, DWORD FileSize)
 {
-	//Find palette/data seperator						  3D/7D?	                0/2                 0/2            0/1D  0/1                Pal Mip                           Width 0/3 0/60 Wid2 0/40
+	//Find palette/data separator						  3D/7D?	                0/2                 0/2            0/1D  0/1                Pal Mip                           Width 0/3 0/60 Wid2 0/40
 	static BYTE PalettePicSeperator[]={0x00,0x03,0xCC,0xCC,0xFE,0xFE,0xFE,0x00,0xFE,0xFE,0x00,0x00,0xFE,0xFE,0x00,0x00,0xFE,0xFE,0x00,0x00,0xFE,0xFE,0xFE,0xFE,0xFE,0xFE,0xCD,0xCD,0xFE,0xFE,0xFE,0xFE,0xFE};
 	static BYTE FileFooter[]={0x05,0x00,0xCC,0xCC,0x01,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01,0xFF,0xCC,0xCC,0x01,0x00,0x00,0x00,0xFF,0xFF,0xFF,0xFF};
 	DWORD Marker=SearchForMarker(FileContents, PalettePicSeperator, FileSize, sizeof(PalettePicSeperator));
 	
-	if(Marker) //If seperator is found, display file
+	if(Marker) //If separator is found, display file
 	{
 		/*//Debugging Output Markers
 		cout.setf(ios::hex | ios::uppercase);
@@ -453,7 +447,7 @@ bool LoadPictureFromRaw(BYTE* FileContents, DWORD FileSize)
 		Width=0x80<<(Width/2+Width%2);
 		if(FileContents[Marker+21]) //Mipmap
 			Width/=2;
-		Width=Width>>(5-WidthScale) | Width<<(WidthScale-5);; //Jury rig to show other hights
+		Width=Width>>(5-WidthScale) | Width<<(WidthScale-5);; //Jury rig to show other heights
 
 		DWORD Height=(FileSize-sizeof(FileFooter))-FileStart;
 
