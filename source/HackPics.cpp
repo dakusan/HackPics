@@ -32,6 +32,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 bool ParseDataFile(char *FullPathFileName);
 DWORD LoadRawFromDataFile(CompressedFile *TheFileNode, BYTE *UncompressedBuffer, int FileNum=0, BYTE *CompressedBuffer=NULL);
 bool LoadPictureFromRaw(BYTE *FileContents, DWORD FileSize);
+void OpenAboutWindow(HWND Owner); //Open about window
 
 //Global variables
 #define MaxNumberOfColors 256
@@ -45,7 +46,7 @@ DWORD ScreenWidth=800,ScreenHeight=600, WidthScale=5;
 HWND MainHwnd;
 char *DataFileName="DATA.BIN";
 char DataFilePath[255];
-enum {ItemList, SaveCompress, SaveRaw, SaveBitmap};
+enum {ItemList, SaveCompress, SaveRaw, SaveBitmap, AboutWindow};
 
 inline DWORD SearchForMarker(BYTE* Data, BYTE *DataToSearchFor, DWORD SizeOfData, DWORD SizeOfSearchData) //Search for a string marker in a file
 {
@@ -71,20 +72,21 @@ int APIENTRY WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR pCmdLine,int nC
 	BitmapInfo->bmiHeader=NewHeader;
 
 	//Create the main window
-	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_HREDRAW | CS_VREDRAW, WndProc, 0L, 0L, hInst, NULL, LoadCursor(NULL,IDC_ARROW), (HBRUSH)GetStockObject(COLOR_BACKGROUND), NULL, "HackStract", NULL };
+	WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_HREDRAW | CS_VREDRAW, WndProc, 0L, 0L, hInst, LoadIcon(hInst, "MAIN_ICON"), LoadCursor(NULL,IDC_ARROW), (HBRUSH)GetStockObject(COLOR_BTNFACE), NULL, "HackPics", NULL };
 	if(RegisterClassEx(&wc)==0)
 		return false;
 	RECT AdjustWindow={0,0,ScreenWidth,ScreenHeight};
-	AdjustWindowRect(&AdjustWindow, WS_OVERLAPPEDWINDOW ^ WS_MAXIMIZEBOX, false);
-	MainHwnd = CreateWindow("HackStract", "Hack Picture Extractor (HackStract)", WS_OVERLAPPEDWINDOW ^ WS_MAXIMIZEBOX, 0, 0, AdjustWindow.right-AdjustWindow.left, AdjustWindow.bottom-AdjustWindow.top, NULL, NULL, hInst, NULL);
+	AdjustWindowRect(&AdjustWindow, WS_OVERLAPPEDWINDOW, false);
+	MainHwnd = CreateWindow("HackPics", "Hack Picture Extractor (HackPics)", WS_OVERLAPPEDWINDOW, 0, 0, AdjustWindow.right-AdjustWindow.left, AdjustWindow.bottom-AdjustWindow.top, NULL, NULL, hInst, NULL);
 	ShowWindow(MainHwnd, SW_SHOW);
     UpdateWindow(MainHwnd);
 
 	//Create the main window's controls
-	CreateWindow("ListBox",NULL, LBS_NOTIFY | WS_CHILD | WS_VISIBLE | WS_VSCROLL| WS_BORDER,650,0,150,500,MainHwnd,(HMENU)ItemList,hInst,0);
-	CreateWindow("Button","Save Original Compressed (GZ)",BS_PUSHBUTTON | BS_MULTILINE | WS_CHILD | WS_VISIBLE ,650,500,150,33,MainHwnd,(HMENU)SaveCompress,hInst,0);
-	CreateWindow("Button","Save Original File (CMP)",BS_PUSHBUTTON | BS_MULTILINE | WS_CHILD | WS_VISIBLE ,650,533,150,33,MainHwnd,(HMENU)SaveRaw,hInst,0);
-	CreateWindow("Button","Save Extracted Contents (BMP)",BS_PUSHBUTTON | BS_MULTILINE | WS_CHILD | WS_VISIBLE ,650,566,150,33,MainHwnd,(HMENU)SaveBitmap,hInst,0);
+	CreateWindow("ListBox",NULL, LBS_NOTIFY | WS_CHILD | WS_VISIBLE | WS_VSCROLL| WS_BORDER,650,0,150,482,MainHwnd,(HMENU)ItemList,hInst,0);
+	CreateWindow("Button","Save Original Compressed (GZ)",BS_PUSHBUTTON | BS_MULTILINE | WS_CHILD | WS_VISIBLE ,650,482,150,33,MainHwnd,(HMENU)SaveCompress,hInst,0);
+	CreateWindow("Button","Save Original File (CMP)",BS_PUSHBUTTON | BS_MULTILINE | WS_CHILD | WS_VISIBLE ,650,515,150,33,MainHwnd,(HMENU)SaveRaw,hInst,0);
+	CreateWindow("Button","Save Extracted Contents (BMP)",BS_PUSHBUTTON | BS_MULTILINE | WS_CHILD | WS_VISIBLE ,650,548,150,33,MainHwnd,(HMENU)SaveBitmap,hInst,0);
+	CreateWindow("Button","About",BS_PUSHBUTTON | BS_MULTILINE | WS_CHILD | WS_VISIBLE ,650,581,150,18,MainHwnd,(HMENU)AboutWindow,hInst,0);
 
 	//Open the master data file
 	if(!ParseDataFile(DataFilePath))
@@ -137,6 +139,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			{
 				case BN_CLICKED: //If one of the buttons is clicked, save accordingly
 				{
+					if(LOWORD(wParam)==AboutWindow)
+					{
+						OpenAboutWindow(MainHwnd);
+						break;
+					}
+
 					char SaveBufferName[255];
 					GetCurrentDirectory(255, SaveBufferName);
 					strcat(SaveBufferName, "\\");
@@ -242,6 +250,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			else //Pass keyboard command onto the listbox
 				SendDlgItemMessage(hWnd, ItemList, msg, wParam, lParam);
 			break;
+		case WM_SIZE:
+		{
+			ScreenWidth=LOWORD(lParam);
+			ScreenHeight=HIWORD(lParam);
+			MoveWindow(GetDlgItem(MainHwnd, ItemList), ScreenWidth-150, 0, 150,  ScreenHeight-118, false);
+			for(int i=SaveCompress;i<=AboutWindow;i++) //Assumes the enum is incremental
+				MoveWindow(GetDlgItem(MainHwnd, i), ScreenWidth-150, ScreenHeight-18-(AboutWindow-i)*33, 150, i==AboutWindow ? 18 : 33, false);
+			break;
+		}
 		case WM_DESTROY:
 		case WM_CLOSE:
             PostQuitMessage(0);
@@ -256,9 +273,11 @@ bool ParseDataFile(char *FullPathFileName)
 	char ParsingStats[255];
 	static RECT TheDims={0,0,ScreenWidth,ScreenHeight};
 	HDC MainDC=GetDC(MainHwnd);
+	SIZE TextSize;
 	sprintf(ParsingStats, "Loading main data file at %s", DataFilePath);
-	BitBlt(MainDC, 0, 0, ScreenWidth, ScreenHeight, MainDC, 0, 0, WHITENESS);
-	TextOut(MainDC, 200, 290, ParsingStats, strlen(ParsingStats));
+	GetTextExtentPoint32(MainDC, ParsingStats, strlen(ParsingStats), &TextSize);
+	BitBlt(MainDC, 0, 0, ScreenWidth-150, ScreenHeight, MainDC, 0, 0, WHITENESS);
+	TextOut(MainDC, (ScreenWidth-150-TextSize.cx)/2, (ScreenHeight-TextSize.cy)/2, ParsingStats, strlen(ParsingStats));
 
 	//Read in data file
 	FILE *MyFile=fopen(FullPathFileName, "rb");
@@ -274,7 +293,7 @@ bool ParseDataFile(char *FullPathFileName)
 	fread(Content, FileSize, 1, MyFile);
 	fclose(MyFile);
 	
-	BitBlt(MainDC, 0, 0, 1600, 1200, MainDC, 0, 0, WHITENESS);
+	BitBlt(MainDC, 0, 0, ScreenWidth-150, ScreenHeight, MainDC, 0, 0, WHITENESS);
 
 	//Loop through all files inside the data file
 	DWORD CurrentFile=0;

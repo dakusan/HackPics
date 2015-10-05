@@ -114,7 +114,15 @@ SOURCE=.\zlib\zutil.c
 # End Group
 # Begin Source File
 
+SOURCE=.\About.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\HackPics.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\Version.rc
 # End Source File
 # Begin Source File
 
