@@ -1,24 +1,24 @@
-# Microsoft Developer Studio Project File - Name="extract" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="HackPics" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Console Application" 0x0103
 
-CFG=extract - Win32 Debug
+CFG=HackPics - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "extract.mak".
+!MESSAGE NMAKE /f "HackPics.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "extract.mak" CFG="extract - Win32 Debug"
+!MESSAGE NMAKE /f "HackPics.mak" CFG="HackPics - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "extract - Win32 Release" (based on "Win32 (x86) Console Application")
-!MESSAGE "extract - Win32 Debug" (based on "Win32 (x86) Console Application")
+!MESSAGE "HackPics - Win32 Release" (based on "Win32 (x86) Console Application")
+!MESSAGE "HackPics - Win32 Debug" (based on "Win32 (x86) Console Application")
 !MESSAGE 
 
 # Begin Project
@@ -28,7 +28,7 @@ CFG=extract - Win32 Debug
 CPP=cl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "extract - Win32 Release"
+!IF  "$(CFG)" == "HackPics - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
@@ -53,7 +53,7 @@ LINK32=link.exe
 # ADD LINK32 writeram.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /machine:I386
 # SUBTRACT LINK32 /pdb:none
 
-!ELSEIF  "$(CFG)" == "extract - Win32 Debug"
+!ELSEIF  "$(CFG)" == "HackPics - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -82,8 +82,8 @@ LINK32=link.exe
 
 # Begin Target
 
-# Name "extract - Win32 Release"
-# Name "extract - Win32 Debug"
+# Name "HackPics - Win32 Release"
+# Name "HackPics - Win32 Debug"
 # Begin Group "zlib"
 
 # PROP Default_Filter ""
@@ -114,7 +114,7 @@ SOURCE=.\zlib\zutil.c
 # End Group
 # Begin Source File
 
-SOURCE=.\extract.cpp
+SOURCE=.\HackPics.cpp
 # End Source File
 # Begin Source File
 
