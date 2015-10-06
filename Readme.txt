@@ -1,3 +1,5 @@
+Important Note: This is a rather old project that I originally created in late 2004. It had some minor modifications done to it in mid 2008 to help with the code clarity so others could work with it easier. I was requested to add it to GitHib a few weeks back, so here it is.
+
 HackPics v1.0.1
 
 Description:
