@@ -439,10 +439,38 @@ DWORD LoadRawFromDataFile(CompressedFile *TheFileNode, BYTE *UncompressedBuffer,
 	return TheStream.total_out; //Return uncompressed data size
 }
 
+#pragma pack(push, 1)
+struct FileHeader
+{
+//	BYTE Palette[];
+	DWORD Reserved1;	//0xCCCC0300		0-3
+	BYTE Flag1;			//0x3D or 0x7D		4
+	DWORD Unknown1;		//0x??00????		5-8
+	BYTE Flag2;			//0 or 2			9
+	WORD Reserved2;		//0x0000			10-11
+	BYTE Unknown2;		//0x??				12
+	BYTE Flag3;			//0 or 2			13
+	WORD Reserved3;		//?0x0000			14-15
+	BYTE Flag4;			//0 or 0x1D			16
+	BYTE Flag5;			//0 or 1			17
+	WORD Reserved4;		//0x0000			18-19
+	BYTE Unknown3;		//0x??				20
+	BYTE Palette;		//0x13?256:16		21
+	BYTE MipMap;		//					22
+	BYTE Unknown4[3];	//0x????????		23-25
+	WORD Reserved5;		//0xCDCD			26-27
+	BYTE Width;			//					28
+	BYTE Flag6;			//0 or 3			29
+	BYTE Flag7;			//0 or 60			30
+	BYTE Width2;		//					31
+	BYTE Flag8;			//0 or 40			32
+	WORD Unknown5;		//0x????			33-34
+};
+#pragma pack(pop)
 
 bool LoadPictureFromRaw(BYTE* FileContents, DWORD FileSize)
 {
-	//Find palette/data separator						  3D/7D?	                0/2                 0/2            0/1D  0/1                Pal Mip                           Width 0/3 0/60 Wid2 0/40
+	//Find palette/data separator
 	static BYTE PalettePicSeperator[]={0x00,0x03,0xCC,0xCC,0xFE,0xFE,0xFE,0x00,0xFE,0xFE,0x00,0x00,0xFE,0xFE,0x00,0x00,0xFE,0xFE,0x00,0x00,0xFE,0xFE,0xFE,0xFE,0xFE,0xFE,0xCD,0xCD,0xFE,0xFE,0xFE,0xFE,0xFE};
 	static BYTE FileFooter[]={0x05,0x00,0xCC,0xCC,0x01,0x00,0x00,0x00,0x01,0x00,0x00,0x00,0x01,0xFF,0xCC,0xCC,0x01,0x00,0x00,0x00,0xFF,0xFF,0xFF,0xFF};
 	DWORD Marker=SearchForMarker(FileContents, PalettePicSeperator, FileSize, sizeof(PalettePicSeperator));
@@ -460,11 +488,12 @@ bool LoadPictureFromRaw(BYTE* FileContents, DWORD FileSize)
 			}*/
 
 		//Find where the data/palette start and the dimensions
-		DWORD NumberOfColors=(FileContents[Marker+20]==0x13 ? 256 : 16);
-		DWORD PaletteStart=Marker-NumberOfColors*sizeof(DWORD)-1, FileStart=Marker+sizeof(PalettePicSeperator)+2;
-		DWORD Width=(FileContents[Marker+27]-(!!FileContents[Marker+30]*0x40))/0x40;
+		FileHeader *HeaderData=(FileHeader*)(FileContents+Marker-1);
+		DWORD NumberOfColors=(HeaderData->Palette==0x13 ? 256 : 16);
+		DWORD PaletteStart=Marker-NumberOfColors*sizeof(DWORD)-1, FileStart=Marker+sizeof(FileHeader);
+		DWORD Width=(HeaderData->Width-(!!HeaderData->Width2*0x40))/0x40;
 		Width=0x80<<(Width/2+Width%2);
-		if(FileContents[Marker+21]) //Mipmap
+		if(HeaderData->MipMap) //Mipmap
 			Width/=2;
 		Width=Width>>(5-WidthScale) | Width<<(WidthScale-5);; //Jury rig to show other heights
 
@@ -496,6 +525,8 @@ bool LoadPictureFromRaw(BYTE* FileContents, DWORD FileSize)
 			DWORD *Color=(DWORD*)&BitmapInfo->bmiColors[i];
 			*Color=((*Color>>16)&0xFF)|(*Color&0xFF00)|((*Color<<16)&0xFF0000);
 		}
+/*		if(memcmp(FileFooter, FileContents+FileStart+Width*Height, sizeof(FileFooter)))
+			MessageBox(NULL, "Footer did not match", "Error", MB_OK);*/
 	}
 	return (Marker!=0);
 }
